@@ -89,3 +89,23 @@ describe Theman::Agency, "data types" do
     @instance.where(:col_three => nil).count.should == 2
   end
 end
+
+describe Theman::Agency, "procedural" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_two.csv'))
+  end
+
+  it "should be able to be called procedural" do
+    smith = ::Theman::Agency.new
+    smith.stream = @csv
+    smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    smith.nulls /"XXXX"/
+    smith.date :date
+    smith.create_table
+    smith.pipe_it
+    my_model = smith.instance
+    my_model.first.date.class.should == Date
+    my_model.first.org_code.class.should == NilClass
+    my_model.count.should == 5
+  end
+end

@@ -17,6 +17,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency "bundler", ">= 1.0.0"
   s.add_development_dependency "rspec", ">= 2.0.0"
   s.add_development_dependency "activerecord", ">= 3.0.0"
+  s.add_development_dependency "pg"
+  
+  s.add_runtime_dependency "activerecord"
+  s.add_runtime_dependency "pg"
 
   s.files        = `git ls-files`.split("\n")
   s.executables  = `git ls-files`.split("\n").map{|f| f =~ /^bin\/(.*)/ ? $1 : nil}.compact

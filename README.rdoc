@@ -2,15 +2,25 @@
 
 The man getting you down?
 
-FasterCSV is great and all but when you get to 100mb files it takes a while and you may only be looking for certain records that match some criteria, enter theman.
+FasterCSV is great and all but when you get to 100MB files it takes a 
+while and you may only be looking for certain records that match some 
+criteria, enter `Theman`.
 
 == Installation
+
+=== Rails3
+
+  gem 'theman'
+
+=== Rails2.x
 
   config.gem 'theman'
 
 Or
 
   gem install 'theman'
+
+Only needs active record and postgresql gem.
 
 == Basic Usage
 
@@ -20,10 +30,10 @@ Or
 
 == Advanced Usage
     
-  my_agent = ::Theman::Agency.new 'ugly.csv' do |agent|
-    agent.nulls /"N"/, /"UNKNOWN"/, /""/
-    agent.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
-    agent.table do |t|
+  my_agent = ::Theman::Agency.new 'ugly.csv' do |smith|
+    smith.nulls /"N"/, /"UNKNOWN"/, /""/
+    smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    smith.table do |t|
       t.date :date
       t.integer :ext_id
       t.float :amount
@@ -33,15 +43,30 @@ Or
   temp_model = my_agent.instance
   temp_model.where(:exited => true).count    
 
-In the above example we ommitted the last 15 rows and made some things null.
+In the above example we omitted the last 15 rows and made some things null.
 
-If you do not provide a table block your columns will be VARCHAR(255), you can cherry pick cols to change data types.
+If you do not provide a table block your columns will be VARCHAR(255), you 
+can cherry pick cols to change data types.
 
-The temp table has no id col but you could add one after if you wanted
+The temp table has no id column but you could add one after if you wanted.
+
+If you want to call this procedural just don't pass in the path to the file 
+and `Theman` will not create a table in which case 
+you will need to call everything explicitly:
+
+  smith = ::Theman::Agency.new
+  smith.stream = 'real_ugly.csv'
+  smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+  smith.nulls /"XXXX"/
+  smith.date :date
+
+  smith.create_table
+  smith.pipe_it
 
 == Troubles
 
-Table empty? the man has given you crappy data and PostgresSQL has silently dissed your data
+Table empty? the man (the real life one) has given you crappy data and PostgresSQL 
+has silently dissed it.
 
 == Copyright
 
