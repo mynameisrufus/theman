@@ -55,7 +55,7 @@ and Theman will not create a table in which case
 you will need to call everything explicitly:
 
   smith = ::Theman::Agency.new
-  smith.stream = 'real_ugly.csv'
+  smith.stream 'real_ugly.csv'
   smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
   smith.nulls /"XXXX"/
   smith.date :date
