@@ -90,6 +90,63 @@ describe Theman::Agency, "data types" do
   end
 end
 
+describe Theman::Agency, "european date styles" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_three.csv'))
+    @agent = ::Theman::Agency.new @csv do |smith|
+      smith.datestyle 'European'
+      smith.table do |t|
+        t.date :col_date
+      end
+    end
+    @instance = @agent.instance
+  end
+  
+  it "should have correct date" do
+    date = @instance.first.col_date
+    date.day.should == 25
+    date.month.should == 12
+  end
+end
+
+describe Theman::Agency, "US date styles" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_four.csv'))
+    @agent = ::Theman::Agency.new @csv do |smith|
+      smith.datestyle 'US'
+      smith.table do |t|
+        t.date :col_date
+      end
+    end
+    @instance = @agent.instance
+  end
+  
+  it "should have correct date" do
+    date = @instance.first.col_date
+    date.day.should == 25
+    date.month.should == 12
+  end
+end
+
+describe Theman::Agency, "ISO date styles" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_five.csv'))
+    @agent = ::Theman::Agency.new @csv do |smith|
+      smith.datestyle 'ISO'
+      smith.table do |t|
+        t.date :col_date
+      end
+    end
+    @instance = @agent.instance
+  end
+  
+  it "should have correct date" do
+    date = @instance.first.col_date
+    date.day.should == 25
+    date.month.should == 12
+  end
+end
+
 describe Theman::Agency, "procedural" do
   before do
     @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_two.csv'))
@@ -97,7 +154,8 @@ describe Theman::Agency, "procedural" do
 
   it "should be able to be called procedural" do
     smith = ::Theman::Agency.new
-    smith.stream = @csv
+    smith.stream @csv
+    smith.datestyle "European"
     smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
     smith.nulls /"XXXX"/
     smith.date :date

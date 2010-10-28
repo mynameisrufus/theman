@@ -2,8 +2,6 @@ module Theman
   class Agency
     attr_reader :instance, :column_names, :null_replacements, :sed_commands
 
-    attr_writer :stream
-    
     def initialize(stream = nil, parent = ::ActiveRecord::Base)
       # source of the data
       @stream = stream
@@ -70,12 +68,27 @@ module Theman
         end
       end
     end
-    
+
+    def stream(path)
+      @stream = path
+    end
+
+    def datestyle(local)
+      @psql_datestyle = local
+    end
+
+    def psql_command
+      psql = []
+      psql << "SET DATESTYLE TO #{@psql_datestyle}" unless @psql_datestyle.nil?
+      psql << "COPY #{instance.table_name} FROM STDIN WITH CSV HEADER"
+      psql.join("; ")
+    end
+
     # use postgress COPY command using STDIN with CSV HEADER
     # reads chunks of 8192 bytes to save memory
     def pipe_it(l = "")
       raw = instance.connection.raw_connection
-      raw.query "COPY #{instance.table_name} FROM STDIN WITH CSV HEADER"
+      raw.query psql_command
       command = "cat #{@stream} #{seds_join}"
       f = IO.popen(command)
       begin

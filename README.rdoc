@@ -4,7 +4,7 @@ The man getting you down?
 
 FasterCSV is great and all but when you get to 100MB files it takes a 
 while and you may only be looking for certain records that match some 
-criteria, enter `Theman`.
+criteria, enter Theman.
 
 == Installation
 
@@ -51,7 +51,7 @@ can cherry pick cols to change data types.
 The temp table has no id column but you could add one after if you wanted.
 
 If you want to call this procedural just don't pass in the path to the file 
-and `Theman` will not create a table in which case 
+and Theman will not create a table in which case 
 you will need to call everything explicitly:
 
   smith = ::Theman::Agency.new
@@ -62,6 +62,44 @@ you will need to call everything explicitly:
 
   smith.create_table
   smith.pipe_it
+
+== Dates
+
+Ah dates, everybodys joy. Use datestyle to tell Theman to tell postgresql:
+
+    my_agent = ::Theman::Agency.new 'uber_foie_gras.csv' do |schmit|
+      schmit.datestyle 'European'
+      schmit.table do |t|
+        t.date :col_date
+      end
+    end
+
+Refer to postgrsql docs for more info but here is some copy and paste:
+
+ISO
+
+* Use ISO 8601-style dates and times (YYYY-MM-DD HH:MM:SS). This is the default. 
+
+SQL
+
+* Use Oracle/Ingres-style dates and times. Note that this style has nothing to do with SQL 
+(which mandates ISO 8601 style), the naming of this option is a historical accident. 
+
+PostgreSQL
+
+* Use traditional PostgreSQL format. 
+
+German
+
+    dd.mm.yyyy
+
+European
+
+    dd/mm/yyyy
+
+US
+
+    mm/dd/yyyy
 
 == Troubles
 
