@@ -14,7 +14,7 @@ describe Theman::Agency, "instance object" do
   end
 
   it "should have a table name" do
-    @instance.table_name.should match /c[0-9]{10}/
+    @instance.table_name.should match /agent[0-9]{10}/
   end
 
   it "should have an ispect method" do
@@ -165,5 +165,22 @@ describe Theman::Agency, "procedural" do
     my_model.first.date.class.should == Date
     my_model.first.org_code.class.should == NilClass
     my_model.count.should == 5
+  end
+end
+
+describe Theman::Agency, "create table" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_one.csv'))
+    @agent = ::Theman::Agency.new @csv do |agent|
+      agent.nulls /"N"/, /"UNKNOWN"/, /""/
+      agent.table do |t|
+        t.string :col_two, :limit => 50
+      end
+    end
+    @instance = @agent.instance
+  end
+
+  it "should have" do
+    @instance.first.col_two.should == "some \\text\\"
   end
 end

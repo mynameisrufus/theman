@@ -1,6 +1,6 @@
 module Theman
   class Agency
-    attr_reader :instance, :column_names, :null_replacements, :sed_commands
+    attr_reader :instance, :column_names, :custom_sed_commands
 
     def initialize(stream = nil, parent = ::ActiveRecord::Base)
       # source of the data
@@ -8,16 +8,16 @@ module Theman
 
       # create a new class that extends an active record model
       # use instance_parent(klass) if not ActiveRecord::Base
-      cabinet_id = "c#{10.times.map{rand(9)}.join}" 
+      agent_id = sprintf "agent%010d", rand(100000000)
       @column_names = {}
       @instance = Class.new(parent) do
         instance_eval <<-EOV, __FILE__, __LINE__ + 1
-          set_table_name "#{cabinet_id}"
+          set_table_name "#{agent_id}"
           def table_name
-            "#{cabinet_id}"
+            "#{agent_id}"
           end
           def inspect
-            "Agent (#{cabinet_id})"
+            "Agent (#{agent_id})"
           end
         EOV
       end
@@ -25,13 +25,12 @@ module Theman
       # if stream given table will be created
       # other wise create_table and pipe_it will need to called
       # proceduraly
-      if stream
-        if block_given?
-          yield self
-        end
-        create_table
-        pipe_it
+      return unless stream
+      if block_given?
+        yield self
       end
+      create_table
+      pipe_it
     end
 
     def table
@@ -41,15 +40,62 @@ module Theman
     # overide ActiveRecord column types to be used in a block
     %w( string text integer float decimal datetime timestamp time date binary boolean ).each do |column_type|
       class_eval <<-EOV, __FILE__, __LINE__ + 1
-        def #{column_type}(*args)
-          column(args[0], '#{column_type}', args[1].nil? ? {} : args[1])
+        def #{column_type}(column_name, *args)
+          column(column_name, '#{column_type}', *args)
         end
       EOV
     end
 
     # overides the default string type column
-    def column(name, type, options)
-      @column_names.merge! name.to_sym => [name, type, options]
+    def column(column_name, column_type, *args)
+      @column_names.merge! column_name.to_sym => [column_name, column_type, *args]
+    end
+
+    def stream(path)
+      @stream = path
+    end
+
+    def datestyle(local)
+      @psql_datestyle = local
+    end
+
+    def nulls(*args)
+      @null_sed_commands = args
+    end
+
+    def seds(*args)
+      @custom_sed_commands = args
+    end
+    
+    def symbolize(name)
+      name.gsub(/ /,"_").gsub(/\W/, "").downcase.to_sym
+    end
+    
+    def psql_datestyle
+      "SET DATESTYLE TO #{@psql_datestyle}"
+    end
+
+    def psql_copy
+      "COPY #{@instance.table_name} FROM STDIN WITH CSV HEADER"
+    end
+
+    def psql_command(psql = [])
+      psql << psql_datestyle unless @psql_datestyle.nil?
+      raise unless @instance.table_exists?
+      psql << psql_copy
+      psql
+    end
+
+    def sed_command(sed= [])
+      sed << null_sed_commands unless @null_sed_commands.nil?
+      sed << custom_sed_commands unless @custom_sed_commands.nil?
+      sed
+    end
+
+    def null_sed_commands
+      @null_sed_commands.map do |regex|
+        "-e 's/#{regex.source}//g'"
+      end
     end
 
     def create_table
@@ -68,29 +114,21 @@ module Theman
         end
       end
     end
-
-    def stream(path)
-      @stream = path
-    end
-
-    def datestyle(local)
-      @psql_datestyle = local
-    end
-
-    def psql_command
-      psql = []
-      psql << "SET DATESTYLE TO #{@psql_datestyle}" unless @psql_datestyle.nil?
-      psql << "COPY #{instance.table_name} FROM STDIN WITH CSV HEADER"
-      psql.join("; ")
+    
+    def system_command
+      unless sed_command.empty?
+        "sed #{sed_command.join(" ")} #{@stream}" 
+      else
+        "cat #{@stream}" 
+      end
     end
 
     # use postgress COPY command using STDIN with CSV HEADER
     # reads chunks of 8192 bytes to save memory
     def pipe_it(l = "")
       raw = instance.connection.raw_connection
-      raw.query psql_command
-      command = "cat #{@stream} #{seds_join}"
-      f = IO.popen(command)
+      raw.query psql_command.join("; ")
+      f = IO.popen(system_command)
       begin
         while f.read(8192, l)
           raw.put_copy_data l
@@ -99,35 +137,6 @@ module Theman
         f.close
       end
       raw.put_copy_end
-    end
-
-    def nulls(*args)
-      @null_replacements = args
-    end
-
-    def seds(*args)
-      @sed_commands = args
-    end
-    
-    def symbolize(name)
-      name.gsub(/ /,"_").gsub(/\W/, "").downcase.to_sym
-    end
-    
-    # join together the sed commands to apply to stream
-    def seds_join(commands = [])
-      unless null_replacements.nil?
-        commands << "| sed #{nulls_to_sed.join(" ")}"
-      end
-      unless sed_commands.nil?
-        commands << "| sed #{sed_commands.join("| sed ")}"
-      end
-      commands.join(" ")
-    end
-
-    def nulls_to_sed
-      @null_replacements.map do |null|
-        "-e 's/#{null.source}//g'"
-      end
     end
   end
 end

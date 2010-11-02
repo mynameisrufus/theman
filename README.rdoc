@@ -1,3 +1,5 @@
+be carefull when using the sed option, make sure noboby can pass commnads to your system.
+
 = theman
 
 The man getting you down?

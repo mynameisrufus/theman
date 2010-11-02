@@ -1,4 +1,4 @@
-require 'theman/themans_agency'
+require 'theman/agency'
 
 module Theman
 end
