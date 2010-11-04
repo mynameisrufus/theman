@@ -2,9 +2,10 @@ module Theman
   class Agency
     attr_reader :instance, :column_names, :custom_sed_commands
 
-    def initialize(stream = nil, parent = ::ActiveRecord::Base)
+    def initialize(stream = nil, parent = ::ActiveRecord::Base, options = {})
       # source of the data
-      @stream = stream
+      @options = options
+      @stream  = stream
 
       # create a new class that extends an active record model
       # use instance_parent(klass) if not ActiveRecord::Base
@@ -100,7 +101,7 @@ module Theman
 
     def create_table
       f = File.open(@stream, 'r')
-      instance.connection.create_table(instance.table_name, :temporary => true, :id => false) do |t|
+      instance.connection.create_table(instance.table_name, :temporary => (@options[:temporary] || true), :id => false) do |t|
         f.each_line do |line|
           line.split(/,/).each do |col|
             column_name = symbolize(col)
