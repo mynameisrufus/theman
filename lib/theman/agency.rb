@@ -3,12 +3,9 @@ module Theman
     attr_reader :instance, :column_names, :custom_sed_commands
 
     def initialize(stream = nil, parent = ::ActiveRecord::Base, options = {})
-      # source of the data
       @options = options
       @stream  = stream
 
-      # create a new class that extends an active record model
-      # use instance_parent(klass) if not ActiveRecord::Base
       agent_id = sprintf "agent%010d", rand(100000000)
       @column_names = {}
       @instance = Class.new(parent) do
@@ -23,22 +20,20 @@ module Theman
         EOV
       end
 
-      # if stream given table will be created
-      # other wise create_table and pipe_it will need to called
-      # proceduraly
+      yield self if block_given?
       return unless stream
-      if block_given?
-        yield self
-      end
       create_table
       pipe_it
+      if @options[:primary_key]
+        add_primary_key
+      end
     end
 
     def table
       yield self if block_given?
     end
 
-    # overide ActiveRecord column types to be used in a block
+    # columnn data type methods
     %w( string text integer float decimal datetime timestamp time date binary boolean ).each do |column_type|
       class_eval <<-EOV, __FILE__, __LINE__ + 1
         def #{column_type}(column_name, *args)
@@ -56,8 +51,8 @@ module Theman
       @stream = path
     end
 
-    def datestyle(local)
-      @psql_datestyle = local
+    def datestyle(style)
+      @psql_datestyle = style
     end
 
     def nulls(*args)
@@ -66,6 +61,10 @@ module Theman
 
     def seds(*args)
       @custom_sed_commands = args
+    end
+
+    def delimiter(char)
+      @delimiter = char
     end
     
     def symbolize(name)
@@ -77,7 +76,11 @@ module Theman
     end
 
     def psql_copy
-      "COPY #{@instance.table_name} FROM STDIN WITH CSV HEADER"
+      "COPY #{@instance.table_name} FROM STDIN WITH #{(psql_delimiter if @delimiter)} CSV HEADER"
+    end
+
+    def psql_delimiter
+      "DELIMITER '#{@delimiter}'"
     end
 
     def psql_command(psql = [])
@@ -99,11 +102,19 @@ module Theman
       end
     end
 
+    # creates a delimiter regular expresion
+    def delimiter_regexp
+      Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
+    end
+
+    # read the first line from the stream to create a table with
     def create_table
       f = File.open(@stream, 'r')
-      instance.connection.create_table(instance.table_name, :temporary => (@options[:temporary] || true), :id => false) do |t|
+      options = {:id => false}
+      options.merge!(:temporary => true) if @options[:temporary].nil?
+      instance.connection.create_table(instance.table_name, options) do |t|
         f.each_line do |line|
-          line.split(/,/).each do |col|
+          line.split(delimiter_regexp).each do |col|
             column_name = symbolize(col)
             if custom = @column_names.fetch(column_name, nil)
               t.column(*custom) 
@@ -116,12 +127,19 @@ module Theman
       end
     end
     
+    # system command for IO subprocesses, commands are piped to 
+    # take advantage of multi cores
     def system_command
       unless sed_command.empty?
-        "sed #{sed_command.join(" ")} #{@stream}" 
+        "cat #{@stream} | sed #{sed_command.join(" | sed ")}" 
       else
-        "cat #{@stream}" 
+        "cat #{@stream}"
       end
+    end
+
+    # addition of a primary key after the data has been piped to the table
+    def add_primary_key
+      instance.connection.raw_connection.query "ALTER TABLE #{instance.table_name} ADD COLUMN agents_pkey serial PRIMARY KEY;"
     end
 
     # use postgress COPY command using STDIN with CSV HEADER

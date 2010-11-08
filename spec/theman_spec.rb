@@ -81,7 +81,7 @@ describe Theman::Agency, "data types" do
   end
 
   it "should have an array of nulls" do
-    @agent.null_replacements.should == [/"N"/, /"UNKNOWN"/, /""/]
+    @agent.null_sed_commands.should == ["-e 's/\"N\"//g'", "-e 's/\"UNKNOWN\"//g'", "-e 's/\"\"//g'"]
   end
   
   it "should have nulls not strings" do
@@ -182,5 +182,31 @@ describe Theman::Agency, "create table" do
 
   it "should have" do
     @instance.first.col_two.should == "some \\text\\"
+  end
+end
+
+describe Theman::Agency, "add primary key" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_one.csv'))
+    @agent = ::Theman::Agency.new @csv, ActiveRecord::Base, :primary_key => true
+    @instance = @agent.instance
+  end
+
+  it "should have serial primary key" do
+    @instance.first.agents_pkey.should == 1
+  end
+end
+
+describe Theman::Agency, "delimiters" do
+  before do
+    @csv = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_six.txt'))
+    @agent = ::Theman::Agency.new @csv do |agent|
+      agent.delimiter "|"
+    end
+    @instance = @agent.instance
+  end
+
+  it "should have imported pipe delimited txt file" do
+    @instance.count.should == 4
   end
 end

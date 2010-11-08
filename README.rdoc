@@ -1,5 +1,3 @@
-be carefull when using the sed option, make sure noboby can pass commnads to your system.
-
 = theman
 
 The man getting you down?
@@ -22,46 +20,61 @@ Or
 
   gem install 'theman'
 
-Only needs active record and postgresql gem.
-
 == Basic Usage
 
   my_agent = ::Theman::Agency.new 'pretty.csv'
-  temp_model = my_agent.instance
-  temp_model.count
+  my_agent.instance.count
+
+Say if you wanted to analyse some data the man has given you, you could make the 
+table persist by doing the following in an IRB session:
+
+  require 'active_record'
+  require 'theman'
+
+  ActiveRecord::Base.establish_connection :database => $USER, :host => "localhost", :adapter => "postgresql"
+
+  my_agent = ::Theman::Agency.new('pretty.csv', ActiveRecord::Base, :temporary => false) {|a| a.date :date_col }
+
+After you have figured out what the hell is going on with the data, you can get the man of 
+your back (for now).
 
 == Advanced Usage
     
-  my_agent = ::Theman::Agency.new 'ugly.csv' do |smith|
-    smith.nulls /"N"/, /"UNKNOWN"/, /""/
-    smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
-    smith.table do |t|
+  my_agent = ::Theman::Agency.new 'ugly.csv', ActiveRecord::Base, :primary_key => true do |s|
+    s.nulls /"N"/, /"UNKNOWN"/, /""/
+    s.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    s.delimiter "|"
+    s.table do |t|
+      t.string :name, :limit => 50
       t.date :date
       t.integer :ext_id
       t.float :amount
       t.boolean :exited
     end
   end
-  temp_model = my_agent.instance
-  temp_model.where(:exited => true).count    
 
-In the above example we omitted the last 15 rows and made some things null.
+  my_agent.instance.where(:exited => true).count
 
-If you do not provide a table block your columns will be VARCHAR(255), you 
+WARNING: if you have user input in your sed commands find a new job, so as 
+not to bring my profesion into disrepute. When pass in extra sed commands 
+as an array each on will be given an extra subprocess, this makes it faster 
+if you have more than one core.
+
+In the above example we omitted the last 15 rows, made some things null, 
+added a primary key and changed some column data types to somthing else.
+
+If you do not provide a table block your columns will be VARCHAR(255); you 
 can cherry pick cols to change data types.
 
-The temp table has no id column but you could add one after if you wanted.
+The temp table has no id column by default but you can add one using the options 
+hash or calling add_primary_key and this will add the agents_pkey column.
 
 If you want to call this procedural just don't pass in the path to the file 
-and Theman will not create a table in which case 
-you will need to call everything explicitly:
+and Theman will not create a table in which case you will need to call everything 
+explicitly:
 
   smith = ::Theman::Agency.new
   smith.stream 'real_ugly.csv'
-  smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
-  smith.nulls /"XXXX"/
-  smith.date :date
-
   smith.create_table
   smith.pipe_it
 
@@ -69,14 +82,15 @@ you will need to call everything explicitly:
 
 Ah dates, everybodys joy. Use datestyle to tell Theman to tell postgresql:
 
-    my_agent = ::Theman::Agency.new 'uber_foie_gras.csv' do |schmit|
-      schmit.datestyle 'European'
-      schmit.table do |t|
-        t.date :col_date
-      end
+  my_agent = ::Theman::Agency.new 'uber_foie_gras.csv' do |schmit|
+    schmit.datestyle 'European'
+    schmit.table do |t|
+      t.date :start_date
+      t.date :end_date
     end
+  end
 
-Refer to postgrsql docs for more info but here is some copy and paste:
+Refer to postgrsql docs for more info but here is some copy and paste action:
 
 ISO
 
@@ -93,15 +107,15 @@ PostgreSQL
 
 German
 
-    dd.mm.yyyy
+* dd.mm.yyyy
 
 European
 
-    dd/mm/yyyy
+* dd/mm/yyyy
 
 US
 
-    mm/dd/yyyy
+* mm/dd/yyyy
 
 == Troubles
 
