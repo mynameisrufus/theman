@@ -65,7 +65,7 @@ explicitly:
 
 WARNING: if you have user input in your sed commands, don't.
 
-NOTE: When passing in extra sed commands each on will be given it's own subprocess, 
+NOTE: When passing in extra sed commands each one will be given it's own subprocess, 
 this makes it much faster if you have more than one core.
 
 == Dates
