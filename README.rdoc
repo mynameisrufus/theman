@@ -2,21 +2,11 @@
 
 The man getting you down?
 
-FasterCSV is great and all but when you get to 100MB files it takes a 
-while and you may only be looking for certain records that match some 
-criteria, enter Theman.
+FasterCSV is great but when you get to 100MB files it takes too long and 
+you may only be looking for certain records that match some criteria, 
+enter Theman.
 
 == Installation
-
-=== Rails3
-
-  gem 'theman'
-
-=== Rails2.x
-
-  config.gem 'theman'
-
-Or
 
   gem install 'theman'
 
@@ -55,22 +45,17 @@ your back (for now).
 
   my_agent.instance.where(:exited => true).count
 
-WARNING: if you have user input in your sed commands find a new job, so as 
-not to bring my profesion into disrepute. When pass in extra sed commands 
-as an array each on will be given an extra subprocess, this makes it faster 
-if you have more than one core.
-
 In the above example we omitted the last 15 rows, made some things null, 
-added a primary key and changed some column data types to somthing else.
+added a primary key and changed some column data types to something else.
 
 If you do not provide a table block your columns will be VARCHAR(255); you 
-can cherry pick cols to change data types.
+can cherry pick the columns that you want to change the data types for.
 
-The temp table has no id column by default but you can add one using the options 
-hash or calling add_primary_key and this will add the agents_pkey column.
+The temp table has no id column by default, but you can add one using the options 
+hash or calling add_primary_key, this will add the agents_pkey column.
 
-If you want to call this procedural just don't pass in the path to the file 
-and Theman will not create a table in which case you will need to call everything 
+If you want to call this procedural style just don't pass in the path to the file 
+and Theman will not create a table, in this case you will need to call everything 
 explicitly:
 
   smith = ::Theman::Agency.new
@@ -78,9 +63,14 @@ explicitly:
   smith.create_table
   smith.pipe_it
 
+WARNING: if you have user input in your sed commands, don't.
+
+NOTE: When passing in extra sed commands each on will be given it's own subprocess, 
+this makes it much faster if you have more than one core.
+
 == Dates
 
-Ah dates, everybodys joy. Use datestyle to tell Theman to tell postgresql:
+Ah dates, the joy! Use datestyle to tell Theman to then tell PostgreSQL:
 
   my_agent = ::Theman::Agency.new 'uber_foie_gras.csv' do |schmit|
     schmit.datestyle 'European'
@@ -90,37 +80,37 @@ Ah dates, everybodys joy. Use datestyle to tell Theman to tell postgresql:
     end
   end
 
-Refer to postgrsql docs for more info but here is some copy and paste action:
+Refer to PostgreSQL docs for more info in the mean time here is some 
+copy and paste action:
 
-ISO
+=== ISO
 
-* Use ISO 8601-style dates and times (YYYY-MM-DD HH:MM:SS). This is the default. 
+Use ISO 8601-style dates and times (YYYY-MM-DD HH:MM:SS). This is the default. 
 
-SQL
+=== SQL
 
-* Use Oracle/Ingres-style dates and times. Note that this style has nothing to do with SQL 
-(which mandates ISO 8601 style), the naming of this option is a historical accident. 
+Use Oracle/Ingres-style dates and times. 
 
-PostgreSQL
+=== PostgreSQL
 
-* Use traditional PostgreSQL format. 
+Use traditional PostgreSQL format. 
 
-German
+=== German
 
-* dd.mm.yyyy
+dd.mm.yyyy
 
-European
+=== European
 
-* dd/mm/yyyy
+dd/mm/yyyy
 
-US
+=== US
 
-* mm/dd/yyyy
+mm/dd/yyyy
 
 == Troubles
 
-Table empty? the man (the real life one) has given you crappy data and PostgresSQL 
-has silently dissed it.
+Table empty? the man (the real life one) has given you crappy data and 
+PostgresSQL has silently dissed it.
 
 == Copyright
 

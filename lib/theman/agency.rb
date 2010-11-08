@@ -1,6 +1,6 @@
 module Theman
   class Agency
-    attr_reader :instance, :column_names, :custom_sed_commands
+    attr_reader :instance, :column_names
 
     def initialize(stream = nil, parent = ::ActiveRecord::Base, options = {})
       @options = options
@@ -47,57 +47,51 @@ module Theman
       @column_names.merge! column_name.to_sym => [column_name, column_type, *args]
     end
 
-    def stream(path)
-      @stream = path
+    def stream(arg)
+      @stream = arg
     end
 
-    def datestyle(style)
-      @psql_datestyle = style
+    def datestyle(arg)
+      @datestyle = arg
     end
 
     def nulls(*args)
-      @null_sed_commands = args
+      @nulls = args
     end
 
     def seds(*args)
-      @custom_sed_commands = args
+      @seds = args
     end
 
-    def delimiter(char)
-      @delimiter = char
+    def delimiter(arg)
+      @delimiter = arg
     end
     
     def symbolize(name)
       name.gsub(/ /,"_").gsub(/\W/, "").downcase.to_sym
     end
     
-    def psql_datestyle
-      "SET DATESTYLE TO #{@psql_datestyle}"
-    end
-
-    def psql_copy
-      "COPY #{@instance.table_name} FROM STDIN WITH #{(psql_delimiter if @delimiter)} CSV HEADER"
-    end
-
-    def psql_delimiter
-      "DELIMITER '#{@delimiter}'"
-    end
-
-    def psql_command(psql = [])
-      psql << psql_datestyle unless @psql_datestyle.nil?
-      raise unless @instance.table_exists?
-      psql << psql_copy
+    def psql_copy(psql = [])
+      psql << "COPY #{@instance.table_name} FROM STDIN WITH"
+      psql << "DELIMITER '#{@delimiter}'" unless @delimiter.nil?
+      psql << "CSV HEADER"
       psql
     end
 
-    def sed_command(sed= [])
-      sed << null_sed_commands unless @null_sed_commands.nil?
-      sed << custom_sed_commands unless @custom_sed_commands.nil?
+    def psql_command(psql = [])
+      psql << "SET DATESTYLE TO #{@datestyle}" unless @datestyle.nil?
+      psql << psql_copy.join(" ")
+      psql
+    end
+
+    def sed_command(sed = [])
+      sed << nulls_to_sed unless @nulls.nil?
+      sed << @seds unless @seds.nil?
       sed
     end
 
-    def null_sed_commands
-      @null_sed_commands.map do |regex|
+    def nulls_to_sed
+      @nulls.map do |regex|
         "-e 's/#{regex.source}//g'"
       end
     end
@@ -137,7 +131,8 @@ module Theman
       end
     end
 
-    # addition of a primary key after the data has been piped to the table
+    # addition of a primary key after the data has been piped to 
+    # the table
     def add_primary_key
       instance.connection.raw_connection.query "ALTER TABLE #{instance.table_name} ADD COLUMN agents_pkey serial PRIMARY KEY;"
     end
@@ -145,6 +140,7 @@ module Theman
     # use postgress COPY command using STDIN with CSV HEADER
     # reads chunks of 8192 bytes to save memory
     def pipe_it(l = "")
+      raise "table does not exist" unless instance.table_exists?
       raw = instance.connection.raw_connection
       raw.query psql_command.join("; ")
       f = IO.popen(system_command)

@@ -81,7 +81,7 @@ describe Theman::Agency, "data types" do
   end
 
   it "should have an array of nulls" do
-    @agent.null_sed_commands.should == ["-e 's/\"N\"//g'", "-e 's/\"UNKNOWN\"//g'", "-e 's/\"\"//g'"]
+    @agent.nulls_to_sed.should == ["-e 's/\"N\"//g'", "-e 's/\"UNKNOWN\"//g'", "-e 's/\"\"//g'"]
   end
   
   it "should have nulls not strings" do
