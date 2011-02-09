@@ -100,25 +100,28 @@ module Theman
     def delimiter_regexp
       Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
     end
+    
+    def raw
+      instance.connection.raw_connection
+    end
 
     # read the first line from the stream to create a table with
     def create_table
-      f = File.open(@stream, 'r')
-      options = {:id => false}
-      options.merge!(:temporary => true) if @options[:temporary].nil?
-      instance.connection.create_table(instance.table_name, options) do |t|
-        f.each_line do |line|
-          line.split(delimiter_regexp).each do |col|
-            column_name = symbolize(col)
-            if custom = @column_names.fetch(column_name, nil)
-              t.column(*custom) 
-            else
-              t.string column_name
-            end
-          end
-          break
+      cols = []
+      headers.split(delimiter_regexp).each do |col|
+        column_name = symbolize(col)
+        if c = @column_names.fetch(column_name, nil)
+          cols << c
+        else
+          cols << [column_name, :string]
         end
       end
+      table = CreateTable.new(cols, instance.connection, instance.table_name, @options[:temporary])
+      raw.query table.to_sql
+    end
+
+    def headers
+      File.open(@stream, "r"){ |infile| infile.gets }
     end
     
     # system command for IO subprocesses, commands are piped to 
@@ -134,14 +137,13 @@ module Theman
     # addition of a primary key after the data has been piped to 
     # the table
     def add_primary_key
-      instance.connection.raw_connection.query "ALTER TABLE #{instance.table_name} ADD COLUMN agents_pkey serial PRIMARY KEY;"
+      raw.query "ALTER TABLE #{instance.table_name} ADD COLUMN agents_pkey serial PRIMARY KEY; ANALYZE #{instance.table_name}";
     end
 
     # use postgress COPY command using STDIN with CSV HEADER
     # reads chunks of 8192 bytes to save memory
     def pipe_it(l = "")
       raise "table does not exist" unless instance.table_exists?
-      raw = instance.connection.raw_connection
       raw.query psql_command.join("; ")
       f = IO.popen(system_command)
       begin
