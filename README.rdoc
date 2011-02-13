@@ -10,27 +10,37 @@ enter Theman.
 
   gem install 'theman'
 
-== Basic Usage
+== Basic usage
 
-  my_agent = ::Theman::Agency.new 'pretty.csv'
-  my_agent.instance.count
+Say we have a csv file calles +sample.csv+ with 220 rows:
 
-Say if you wanted to analyse some data the man has given you, you could make the 
-table persist by doing the following in an IRB session:
+  conn  = PGconn.open(:dbname => 'test')
+  
+  agent = Theman::Agency.new(conn, 'sample.csv')
+  agent.create!
 
-  require 'active_record'
-  require 'theman'
+  res   = conn.exec("SELECT count(*) FROM #{agent.table_name}")
+  res.getvalue(0,0)
 
-  ActiveRecord::Base.establish_connection :database => $USER, :host => "localhost", :adapter => "postgresql"
+  => 220
 
-  my_agent = ::Theman::Agency.new('pretty.csv', ActiveRecord::Base, :temporary => false) {|a| a.date :date_col }
+== Basic usage with Active Record and a simple object
+  
+  conn  = ActiveRecord::Base.connection.raw_connection
+  
+  agent = Theman::Agency.new(conn, 'sample.csv')
+  agent.create!
 
-After you have figured out what the hell is going on with the data, you can get the man of 
-your back (for now).
+  model Theman::Object(agent.table_name, ActiveRecord::Base)
+  model.count
 
-== Advanced Usage
+  => 220
+
+== Advanced usage with Active Record and an existing model
     
-  my_agent = ::Theman::Agency.new 'ugly.csv', ActiveRecord::Base, :primary_key => true do |s|
+  conn  = ActiveRecord::Base.connection.raw_connection
+
+  agent = Theman::Agency.new conn, 'ugly.csv' |s|
     s.nulls /"N"/, /"UNKNOWN"/, /""/
     s.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
     s.delimiter "|"
@@ -42,8 +52,11 @@ your back (for now).
       t.boolean :exited
     end
   end
-
-  my_agent.instance.where(:exited => true).count
+  
+  MyModel.table_name = agent.table_name
+  MyModel.where(:exited => true).count
+  
+  => 220
 
 In the above example we omitted the last 15 rows, made some things null, 
 added a primary key and changed some column data types to something else.
@@ -52,27 +65,15 @@ If you do not provide a table block your columns will be VARCHAR(255); you
 can cherry pick the columns that you want to change the data types for.
 
 The temp table has no id column by default, but you can add one using the options 
-hash or calling add_primary_key, this will add the agents_pkey column.
-
-If you want to call this procedural style just don't pass in the path to the file 
-and Theman will not create a table, in this case you will need to call everything 
-explicitly:
-
-  smith = ::Theman::Agency.new
-  smith.stream 'real_ugly.csv'
-  smith.create_table
-  smith.pipe_it
+hash or calling +add_primary_key+, this will add the agents_pkey column.
 
 WARNING: if you have user input in your sed commands, don't.
-
-NOTE: When passing in extra sed commands each one will be given it's own subprocess, 
-this makes it much faster if you have more than one core.
 
 == Dates
 
 Ah dates, the joy! Use datestyle to tell Theman to then tell PostgreSQL:
 
-  my_agent = ::Theman::Agency.new 'uber_foie_gras.csv' do |schmit|
+  agent = Theman::Agency.new conn, 'uber_foie_gras.csv' do |schmit|
     schmit.datestyle 'European'
     schmit.table do |t|
       t.date :start_date
