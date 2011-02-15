@@ -2,7 +2,7 @@
 
 The man getting you down?
 
-Theman lets you import lots of data into postgres very fast.
+Theman lets you import lots of data into PostgreSQL very fast.
 
 == Installation
 
@@ -36,7 +36,7 @@ Say we have a csv file called <tt>sample.csv</tt> with 220 rows:
 
 == Advanced usage with Active Record and an existing model
 
-Theman will call the +create!+ method if you pass in a block.
+Theman will call the <tt>create!</tt> method if you pass in a block.
 
   conn  = ActiveRecord::Base.connection.raw_connection
 
@@ -58,28 +58,26 @@ Theman will call the +create!+ method if you pass in a block.
   
   => 220
 
-In the above example we omitted the last 15 rows, made some things null, 
-added a primary key and changed some column data types to something else.
+In the above example we omitted the last 15 rows, made some things null and 
+specified some column data types.
 
 If you do not provide a table block your columns will be VARCHAR(255); you 
 can cherry pick the columns that you want to change the data types for.
 
-The temp table has no id column by default, but you can add one using the options 
-hash or calling +add_primary_key+, this will add the agents_pkey column.
-
-WARNING: if you have user input in your sed commands, don't.
+The temp table has no id column by default, but you can add one by calling 
++add_primary_key!+, this will add the +agents_pkey+ column.
 
 == Drop on commit
 
 If you want to use <tt>ON COMMIT DROP</tt> you will need to pass in 
 <tt>:on_commit => :drop</tt> into options and do everthing inside a transacton.
 
-    agent = Theman::Agency.new conn, csv, :on_commit => :drop
+  agent = Theman::Agency.new conn, 'sample.csv', :on_commit => :drop
 
-    agent.transaction do
-      agent.create!
-      # do stuff
-    end
+  agent.transaction do
+    agent.create!
+    # do stuff
+  end
 
 == No headers
 
