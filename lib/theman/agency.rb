@@ -1,7 +1,23 @@
 module Theman
   class Agency
     attr_reader :columns, :table_name, :connection
-
+    # create a new agent object - if a block is passed create! is called
+    #
+    # ==== Parameters
+    # * +conn+ - A database connection from the <tt>PGconn</tt> class 
+    #   or <tt>ActiveRecord::Base.connection.raw_connection</tt> which 
+    #   is the same class.
+    # * +stream+ - path to the data file.
+    # * +options+ - Additional options are <tt>:temporary</tt>, 
+    #   <tt>:on_commit</tt> and <tt>:headers</tt>
+    #
+    # ==== Examples
+    #   # Update all customers with the given attributes
+    #   conn  = PGconn.open(:dbname => 'test')
+    #   agent = Theman::Agency.new(conn, 'sample.csv')
+    #   agent.create!
+    #   res = conn.exec("SELECT count(*) FROM #{agent.table_name}")
+    #   res.getvalue(0,0)
     def initialize(conn, stream, options = {}, &block)
       @stream       = stream
       @connection   = conn
@@ -17,6 +33,13 @@ module Theman
       end
     end
     
+    # create a transaction block for use with :on_commit => :drop
+    def transaction(&block)
+      connection.exec "BEGIN;"
+      yield
+      connection.exec "COMMIT;"
+    end
+
     def create_stream_columns #:nodoc
       @stream_columns_set = true
       headers.split(delimiter_regexp).each do |column|
@@ -31,7 +54,7 @@ module Theman
     # create default columns from stream and replace selected
     # columns with custom data types from block
     def table(&block)
-      create_stream_columns
+      create_stream_columns unless @options[:headers] == false
       yield @columns
     end
     
@@ -63,7 +86,8 @@ module Theman
     def psql_copy(psql = []) #:nodoc
       psql << "COPY #{table_name} FROM STDIN WITH"
       psql << "DELIMITER '#{@delimiter}'" unless @delimiter.nil?
-      psql << "CSV HEADER"
+      psql << "CSV"
+      psql << "HEADER" unless @options[:headers] == false
       psql
     end
 
@@ -86,16 +110,18 @@ module Theman
     end
 
     def delimiter_regexp #:nodoc
-      Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
+      @delimiter_regexp ||= Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
     end
     
-    # Postgress COPY command using STDIN with CSV HEADER
+    # Postgress COPY command using STDIN
     # - reads chunks of 8192 bytes to save memory
     # System command for IO subprocesses are piped to 
     # take advantage of multi cores
     def create!
-      create_stream_columns unless @stream_columns_set
-      connection.exec Table.new(table_name, @columns.to_sql, @options[:temporary]).to_sql
+      unless @stream_columns_set || @options[:headers] == false
+        create_stream_columns
+      end
+      connection.exec Table.new(table_name, @columns.to_sql, @options[:temporary], @options[:on_commit]).to_sql
       pipe_it
     end
     
@@ -106,7 +132,13 @@ module Theman
     
     # analyzes the table for efficent query contstruction on tables larger than ~1000 tuples
     def analyze!
-      connection.exec "ANALYZE #{table_name};";
+      connection.exec "ANALYZE #{table_name};"
+    end
+
+    # explicitly drop table
+    def drop!
+      connection.exec "DROP TABLE #{table_name};"
+      @table_name = nil
     end
     
     def system_command #:nodoc
@@ -129,12 +161,5 @@ module Theman
       end
       connection.put_copy_end
     end
-    
-    #def dump(file = File.join(File.direname(__FILE__),"#{instance.table_name}.csv"))
-    #  psql = []
-    #  psql << "COPY #{instance.table_name} TO STDOUT"
-    #  psql << "WITH DELIMITER '#{@delimiter}'" unless @delimiter.nil?
-    #  con.query psql.join(' ')
-    #end
   end
 end

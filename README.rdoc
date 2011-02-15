@@ -2,9 +2,7 @@
 
 The man getting you down?
 
-FasterCSV is great but when you get to 100MB files it takes too long and 
-you may only be looking for certain records that match some criteria, 
-enter Theman.
+Theman lets you import lots of data into postgres very fast.
 
 == Installation
 
@@ -12,14 +10,14 @@ enter Theman.
 
 == Basic usage
 
-Say we have a csv file calles +sample.csv+ with 220 rows:
+Say we have a csv file called <tt>sample.csv</tt> with 220 rows:
 
   conn  = PGconn.open(:dbname => 'test')
   
   agent = Theman::Agency.new(conn, 'sample.csv')
   agent.create!
 
-  res   = conn.exec("SELECT count(*) FROM #{agent.table_name}")
+  res = conn.exec("SELECT count(*) FROM #{agent.table_name}")
   res.getvalue(0,0)
 
   => 220
@@ -31,20 +29,22 @@ Say we have a csv file calles +sample.csv+ with 220 rows:
   agent = Theman::Agency.new(conn, 'sample.csv')
   agent.create!
 
-  model Theman::Object(agent.table_name, ActiveRecord::Base)
+  model = Theman::Object(agent.table_name, ActiveRecord::Base)
   model.count
 
   => 220
 
 == Advanced usage with Active Record and an existing model
-    
+
+Theman will call the +create!+ method if you pass in a block.
+
   conn  = ActiveRecord::Base.connection.raw_connection
 
-  agent = Theman::Agency.new conn, 'ugly.csv' |s|
-    s.nulls /"N"/, /"UNKNOWN"/, /""/
-    s.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
-    s.delimiter "|"
-    s.table do |t|
+  agent = Theman::Agency.new conn, 'ugly.csv' |ag|
+    ag.nulls /"N"/, /"UNKNOWN"/, /""/
+    ag.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    ag.delimiter "|"
+    ag.table do |t|
       t.string :name, :limit => 50
       t.date :date
       t.integer :ext_id
@@ -69,6 +69,23 @@ hash or calling +add_primary_key+, this will add the agents_pkey column.
 
 WARNING: if you have user input in your sed commands, don't.
 
+== Drop on commit
+
+If you want to use <tt>ON COMMIT DROP</tt> you will need to pass in 
+<tt>:on_commit => :drop</tt> into options and do everthing inside a transacton.
+
+    agent = Theman::Agency.new conn, csv, :on_commit => :drop
+
+    agent.transaction do
+      agent.create!
+      # do stuff
+    end
+
+== No headers
+
+If you data does not have headers pass into options <tt>:headers => false</tt>, but 
+each column must be specified or the import will fail.
+
 == Dates
 
 Ah dates, the joy! Use datestyle to tell Theman to then tell PostgreSQL:
@@ -84,34 +101,36 @@ Ah dates, the joy! Use datestyle to tell Theman to then tell PostgreSQL:
 Refer to PostgreSQL docs for more info in the mean time here is some 
 copy and paste action:
 
-=== ISO
+<b>ISO</b>
 
 Use ISO 8601-style dates and times (YYYY-MM-DD HH:MM:SS). This is the default. 
 
-=== SQL
+<b>SQL</b>
 
 Use Oracle/Ingres-style dates and times. 
 
-=== PostgreSQL
+<b>PostgreSQL</b>
 
 Use traditional PostgreSQL format. 
 
-=== German
+<b>German</b>
 
 dd.mm.yyyy
 
-=== European
+<b>European</b>
 
 dd/mm/yyyy
 
-=== US
+<b>US</b>
 
 mm/dd/yyyy
 
-== Troubles
+== My table is empty?
 
-Table empty? the man (the real life one) has given you crappy data and 
-PostgresSQL has silently dissed it.
+PostgreSQL <tt>COPY</tt> requires that the data be well formed, any rows that 
+are different to what is expected by the table and the whole import will fail. 
+If you are importing very large files and the import fails space on disc will still
+be used untill <tt>VACUUM</tt>.
 
 == Copyright
 

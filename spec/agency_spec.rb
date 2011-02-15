@@ -186,3 +186,61 @@ describe Theman::Agency, "delimiters" do
     @model.count.should == 4
   end
 end
+
+describe Theman::Agency, "no headers" do
+  before do
+    conn  = ActiveRecord::Base.connection.raw_connection
+    csv   = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_seven.csv'))
+    agent = Theman::Agency.new conn, csv, :headers => false do |agent|
+      agent.nulls /"N"/, /"UNKNOWN"/, /""/
+      agent.table do |t|
+        t.date :col_date
+        t.string :col_two
+        t.string :col_three
+        t.boolean :col_four
+        t.float :col_five
+      end
+    end
+    @model = Theman::Object.new(agent.table_name, ActiveRecord::Base)
+  end
+
+  it "should import csv without headers" do
+    @model.count.should == 4
+  end
+end
+
+describe Theman::Agency, "with advanced sed" do
+  before do
+    conn  = ActiveRecord::Base.connection.raw_connection
+    csv   = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_eight.csv'))
+    agent = Theman::Agency.new conn, csv, :headers => false do |agent|
+      agent.seds '-e \'s/[A-Z][A-Z]$/\"&\"/\' -e \'s/^[0-9|-]*/&/\'', '\'s/,\(.*\),/,\"\1\",/\''
+      agent.table do |t|
+        t.string :col_one
+        t.string :col_two
+        t.string :col_three
+      end
+    end
+    @model = Theman::Object.new(agent.table_name, ActiveRecord::Base)
+  end
+
+  it "should import csv without headers" do
+    @model.count.should == 249
+  end
+end
+
+describe Theman::Agency, "data types" do
+  it "should be able to run in transaction" do
+    conn  = ActiveRecord::Base.connection.raw_connection
+    csv   = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_three.csv'))
+  
+    agent = Theman::Agency.new conn, csv, :on_commit => :drop
+
+    agent.transaction do
+      agent.create!
+
+      model = Theman::Object.new(agent.table_name, ActiveRecord::Base)
+      model.count.should == 4
+    end
+  end
+end
