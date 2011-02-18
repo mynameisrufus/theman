@@ -125,9 +125,11 @@ module Theman
       pipe_it
     end
     
-    # adds a serial column called agents_pkey and sets as primary key
+    # adds a serial column called id and sets as primary key
+    # if your data allready has a column called id the column will be called agents_pkey
     def add_primary_key!
-      connection.exec "ALTER TABLE #{table_name} ADD COLUMN agents_pkey serial PRIMARY KEY;"
+      name = @columns.include?(:id) ? "agents_pkey" : "id"
+      connection.exec "ALTER TABLE #{table_name} ADD COLUMN #{name} serial PRIMARY KEY;"
     end
     
     # analyzes the table for efficent query contstruction on tables larger than ~1000 tuples

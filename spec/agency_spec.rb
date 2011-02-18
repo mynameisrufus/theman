@@ -168,7 +168,7 @@ describe Theman::Agency, "add primary key" do
   end
 
   it "should have serial primary key" do
-    @model.first.agents_pkey.should == 1
+    @model.first.id.should == 1
   end
 end
 

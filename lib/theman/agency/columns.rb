@@ -35,6 +35,10 @@ module Theman
         end
         @columns << [sym_col, type, *args]
       end
+
+      def include?(sym_col)
+        @columns.map{|column| column[0] }.include?(sym_col)
+      end
       
       def column_to_sql(name, type, options = {}) #:nodoc
         sql = [quote_column_name(name)]
