@@ -20,8 +20,6 @@ Say we have a csv file called <tt>sample.csv</tt> with 220 rows:
   res = conn.exec("SELECT count(*) FROM #{agent.table_name}")
   res.getvalue(0,0)
 
-  => 220
-
 == Basic usage with Active Record and a simple object
   
   conn  = ActiveRecord::Base.connection.raw_connection
@@ -29,10 +27,8 @@ Say we have a csv file called <tt>sample.csv</tt> with 220 rows:
   agent = Theman::Agency.new(conn, 'sample.csv')
   agent.create!
 
-  model = Theman::Object(agent.table_name, ActiveRecord::Base)
+  model = Theman::Object.new(agent.table_name, ActiveRecord::Base)
   model.count
-
-  => 220
 
 == Advanced usage with Active Record and an existing model
 
@@ -40,11 +36,11 @@ Theman will call the <tt>create!</tt> method if you pass in a block.
 
   conn  = ActiveRecord::Base.connection.raw_connection
 
-  agent = Theman::Agency.new conn, 'ugly.csv' |ag|
-    ag.nulls /"N"/, /"UNKNOWN"/, /""/
-    ag.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
-    ag.delimiter "|"
-    ag.table do |t|
+  agent = Theman::Agency.new conn, 'ugly.csv' do |smith|
+    smith.nulls /"N"/, /"UNKNOWN"/, /""/
+    smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    smith.delimiter "|"
+    smith.table do |t|
       t.string :name, :limit => 50
       t.date :date
       t.integer :ext_id
@@ -56,8 +52,6 @@ Theman will call the <tt>create!</tt> method if you pass in a block.
   MyModel.table_name = agent.table_name
   MyModel.where(:exited => true).count
   
-  => 220
-
 In the above example we omitted the last 15 rows, made some things null and 
 specified some column data types.
 
@@ -65,7 +59,7 @@ If you do not provide a table block your columns will be VARCHAR(255); you
 can cherry pick the columns that you want to change the data types for.
 
 The temp table has no id column by default, but you can add one by calling 
-+add_primary_key!+, this will add the +agents_pkey+ column.
+<tt>add_primary_key!</tt>, this will add the <tt>agents_pkey</tt> column.
 
 == Drop on commit
 

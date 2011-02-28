@@ -9,7 +9,7 @@ module Theman
         @columns    = []
       end
 
-      def to_sql #:nodoc
+      def to_sql #:nodoc:
         @columns.map{|column| column_to_sql(*column)}.join(', ')
       end
 
@@ -21,11 +21,11 @@ module Theman
         EOV
       end
       
-      def symbolize(name) #:nodoc
+      def symbolize(name) #:nodoc:
         name.is_a?(Symbol) ? name : name.gsub(/ /,"_").gsub(/\W/, "").downcase.to_sym
       end
 
-      def column(name, type, *args) #:nodoc
+      def column(name, type, *args) #:nodoc:
         sym_col = symbolize(name)
         @columns.each_with_index do |column, index|
           if column[0] == sym_col
@@ -40,7 +40,7 @@ module Theman
         @columns.map{|column| column[0] }.include?(sym_col)
       end
       
-      def column_to_sql(name, type, options = {}) #:nodoc
+      def column_to_sql(name, type, options = {}) #:nodoc:
         sql = [quote_column_name(name)]
         case type
         when 'integer'
@@ -91,7 +91,7 @@ module Theman
         sql.join(' ')
       end
       
-      def quote_column_name(name) #:nodoc
+      def quote_column_name(name) #:nodoc:
         @connection.quote_ident(name.to_s)
       end
     end

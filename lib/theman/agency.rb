@@ -11,7 +11,7 @@ module Theman
     # * +options+ - Additional options are <tt>:temporary</tt>, 
     #   <tt>:on_commit</tt> and <tt>:headers</tt>
     #
-    # ==== Examples
+    # ==== Example
     #   # Update all customers with the given attributes
     #   conn  = PGconn.open(:dbname => 'test')
     #   agent = Theman::Agency.new(conn, 'sample.csv')
@@ -40,14 +40,14 @@ module Theman
       connection.exec "COMMIT;"
     end
 
-    def create_stream_columns #:nodoc
+    def create_stream_columns #:nodoc:
       @stream_columns_set = true
       headers.split(delimiter_regexp).each do |column|
         @columns.string column
       end
     end
 
-    def headers #:nodoc
+    def headers #:nodoc:
       File.open(@stream, "r"){ |infile| infile.gets }
     end
     
@@ -83,7 +83,7 @@ module Theman
       @delimiter = arg
     end
     
-    def psql_copy(psql = []) #:nodoc
+    def psql_copy(psql = []) #:nodoc:
       psql << "COPY #{table_name} FROM STDIN WITH"
       psql << "DELIMITER '#{@delimiter}'" unless @delimiter.nil?
       psql << "CSV"
@@ -91,25 +91,25 @@ module Theman
       psql
     end
 
-    def psql_command(psql = []) #:nodoc
+    def psql_command(psql = []) #:nodoc:
       psql << "SET DATESTYLE TO #{@datestyle}" unless @datestyle.nil?
       psql << psql_copy.join(" ")
       psql
     end
 
-    def sed_command(sed = []) #:nodoc
+    def sed_command(sed = []) #:nodoc:
       sed << nulls_to_sed unless @nulls.nil?
       sed << @seds unless @seds.nil?
       sed
     end
 
-    def nulls_to_sed #:nodoc
+    def nulls_to_sed #:nodoc:
       @nulls.map do |regex|
         "-e 's/#{regex.source}//g'"
       end
     end
 
-    def delimiter_regexp #:nodoc
+    def delimiter_regexp #:nodoc:
       @delimiter_regexp ||= Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
     end
     
@@ -143,7 +143,7 @@ module Theman
       @table_name = nil
     end
     
-    def system_command #:nodoc
+    def system_command #:nodoc:
       unless sed_command.empty?
         "cat #{@stream} | sed #{sed_command.join(" | sed ")}" 
       else
@@ -151,7 +151,7 @@ module Theman
       end
     end
 
-    def pipe_it(l = "") #:nodoc
+    def pipe_it(l = "") #:nodoc:
       connection.exec psql_command.join("; ")
       f = IO.popen(system_command)
       begin
