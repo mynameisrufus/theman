@@ -160,6 +160,25 @@ module Theman
         f.close
       end
       connection.put_copy_end
+      res = connection.get_result
+      status_code = res.result_status
+      if status_code != 1
+        raise Error.new status_code, res.res_status(status_code), res.result_error_message
+      end
+    end
+
+    class Error < Exception
+      attr_accessor :code, :constant, :error, :context
+
+      def initialize(code, constant, message)
+        @code = code
+        @constant = constant
+        @error, @context = message.split(/\n/)
+      end
+      
+      def to_s
+        @error
+      end
     end
   end
 end

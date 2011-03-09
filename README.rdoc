@@ -40,7 +40,7 @@ Theman will call the <tt>create!</tt> method if you pass in a block.
 
   conn  = ActiveRecord::Base.connection.raw_connection
 
-  agent = Theman::Agency.new conn, 'ugly.csv' |ag|
+  agent = Theman::Agency.new conn, 'ugly.csv' do |ag|
     ag.nulls /"N"/, /"UNKNOWN"/, /""/
     ag.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
     ag.delimiter "|"
@@ -123,10 +123,12 @@ dd/mm/yyyy
 
 mm/dd/yyyy
 
-== My table is empty?
+== Errors
 
 PostgreSQL <tt>COPY</tt> requires that the data be well formed, any rows that 
-are different to what is expected by the table and the whole import will fail. 
+are different to what is expected by the table and the whole import will raise an 
+<tt>Theman::Agency::Error</tt>.
+
 If you are importing very large files and the import fails space on disc will still
 be used untill <tt>VACUUM</tt>.
 

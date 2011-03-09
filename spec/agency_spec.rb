@@ -244,3 +244,18 @@ describe Theman::Agency, "data types" do
     end
   end
 end
+
+describe Theman::Agency, "data types" do
+  before do
+    @conn = ActiveRecord::Base.connection.raw_connection
+    @csv  = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_one.csv'))
+  end
+  
+  it "should raise an error if the columns are wrong" do
+    agent = ::Theman::Agency.new @conn, @csv
+    agent.table do |t|
+      t.date :column_not_in_csv
+    end
+    lambda{ @agent.create! }.should raise_error
+  end
+end
