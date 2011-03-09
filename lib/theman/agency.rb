@@ -11,7 +11,7 @@ module Theman
     # * +options+ - Additional options are <tt>:temporary</tt>, 
     #   <tt>:on_commit</tt> and <tt>:headers</tt>
     #
-    # ==== Examples
+    # ==== Example
     #   # Update all customers with the given attributes
     #   conn  = PGconn.open(:dbname => 'test')
     #   agent = Theman::Agency.new(conn, 'sample.csv')
@@ -40,14 +40,14 @@ module Theman
       connection.exec "COMMIT;"
     end
 
-    def create_stream_columns #:nodoc
+    def create_stream_columns #:nodoc:
       @stream_columns_set = true
       headers.split(delimiter_regexp).each do |column|
         @columns.string column
       end
     end
 
-    def headers #:nodoc
+    def headers #:nodoc:
       File.open(@stream, "r"){ |infile| infile.gets }
     end
     
@@ -77,13 +77,18 @@ module Theman
     def seds(*args)
       @seds = args
     end
+    
+    # line to finish copy at
+    def chop(line = 1)
+      @chop = line
+    end
 
     # delimter used in stream - comma is the default
     def delimiter(arg)
       @delimiter = arg
     end
     
-    def psql_copy(psql = []) #:nodoc
+    def psql_copy(psql = []) #:nodoc:
       psql << "COPY #{table_name} FROM STDIN WITH"
       psql << "DELIMITER '#{@delimiter}'" unless @delimiter.nil?
       psql << "CSV"
@@ -91,25 +96,30 @@ module Theman
       psql
     end
 
-    def psql_command(psql = []) #:nodoc
+    def psql_command(psql = []) #:nodoc:
       psql << "SET DATESTYLE TO #{@datestyle}" unless @datestyle.nil?
       psql << psql_copy.join(" ")
       psql
     end
 
-    def sed_command(sed = []) #:nodoc
+    def sed_command(sed = []) #:nodoc:
       sed << nulls_to_sed unless @nulls.nil?
       sed << @seds unless @seds.nil?
+      sed << chop_to_sed unless @chop.nil?
       sed
     end
+    
+    def chop_to_sed #:nodoc:
+      "-n -e :a -e '1,#{@chop}!{P;N;D;};N;ba'"
+    end
 
-    def nulls_to_sed #:nodoc
+    def nulls_to_sed #:nodoc:
       @nulls.map do |regex|
         "-e 's/#{regex.source}//g'"
       end
     end
 
-    def delimiter_regexp #:nodoc
+    def delimiter_regexp #:nodoc:
       @delimiter_regexp ||= Regexp.new(@delimiter.nil? ? "," : "\\#{@delimiter}")
     end
     
@@ -125,9 +135,11 @@ module Theman
       pipe_it
     end
     
-    # adds a serial column called agents_pkey and sets as primary key
+    # adds a serial column called id and sets as primary key
+    # if your data allready has a column called id the column will be called agents_pkey
     def add_primary_key!
-      connection.exec "ALTER TABLE #{table_name} ADD COLUMN agents_pkey serial PRIMARY KEY;"
+      name = @columns.include?(:id) ? "agents_pkey" : "id"
+      connection.exec "ALTER TABLE #{table_name} ADD COLUMN #{name} serial PRIMARY KEY;"
     end
     
     # analyzes the table for efficent query contstruction on tables larger than ~1000 tuples
@@ -141,7 +153,7 @@ module Theman
       @table_name = nil
     end
     
-    def system_command #:nodoc
+    def system_command #:nodoc:
       unless sed_command.empty?
         "cat #{@stream} | sed #{sed_command.join(" | sed ")}" 
       else
@@ -149,7 +161,7 @@ module Theman
       end
     end
 
-    def pipe_it(l = "") #:nodoc
+    def pipe_it(l = "") #:nodoc:
       connection.exec psql_command.join("; ")
       f = IO.popen(system_command)
       begin

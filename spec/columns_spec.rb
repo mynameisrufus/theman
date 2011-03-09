@@ -73,3 +73,15 @@ describe Theman::Agency::Columns, "data types" do
     @columns.to_sql.should == "\"col_one\" boolean"
   end
 end
+
+describe Theman::Agency::Columns, "data types" do
+  before do
+    @columns = Theman::Agency::Columns.new(ActiveRecord::Base.connection.raw_connection)
+  end
+
+  it "should have include? method" do
+    @columns.boolean :col_one
+    @columns.include?(:col_one).should be_true
+    @columns.include?(:col_two).should be_false
+  end
+end

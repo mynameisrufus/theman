@@ -6,7 +6,7 @@ describe Theman::Agency, "sed chomp" do
     csv   = File.expand_path(File.join(File.dirname(__FILE__), '..', 'spec', 'fixtures', 'temp_two.csv'))
     
     agent = ::Theman::Agency.new conn, csv do |agent|
-      agent.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+      agent.chop 15
     end
 
     @model = Theman::Object.new(agent.table_name, ActiveRecord::Base)
@@ -123,7 +123,7 @@ describe Theman::Agency, "procedural" do
   it "should be able to be called procedural" do
     smith = ::Theman::Agency.new @conn, @csv
     smith.datestyle "European"
-    smith.seds "-n -e :a -e '1,15!{P;N;D;};N;ba'"
+    smith.chop 15
     smith.nulls /"XXXX"/
     
     smith.table do |t|
@@ -168,7 +168,7 @@ describe Theman::Agency, "add primary key" do
   end
 
   it "should have serial primary key" do
-    @model.first.agents_pkey.should == 1
+    @model.first.id.should == 1
   end
 end
 
